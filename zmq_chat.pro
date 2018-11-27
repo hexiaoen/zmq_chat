@@ -1,4 +1,4 @@
-QT += quick
+QT += quick network
 CONFIG += c++11
 
 # The following define makes your compiler emit warnings if you use
@@ -13,7 +13,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-        main.cpp
+        main.cpp \
+    client.cpp \
+    mid.cpp
 
 RESOURCES += qml.qrc
 
@@ -28,10 +30,14 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-win32: LIBS += -L$$PWD/./ -llibzmq
+INCLUDEPATH += F:\QTProject\zmq_share
 
-INCLUDEPATH += $$PWD/.
-DEPENDPATH += $$PWD/.
 
-win32:!win32-g++: PRE_TARGETDEPS += $$PWD/./libzmq.lib
-else:win32-g++: PRE_TARGETDEPS += $$PWD/./liblibzmq.a
+HEADERS += zmq.h \
+    client.h \
+    mid.h\
+    zhelpers.h
+
+
+LIBS +=  F:\QTProject\zmq_share\libzmq.lib
+#LIBS +=  -llibzmq
