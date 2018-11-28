@@ -75,7 +75,6 @@ public:
         return more;
     }
 
-
     void snd_msg(const QString &id, const QString & msg);
 
     /*监听函数*/
@@ -97,7 +96,8 @@ private:
     /*登录服务器请求套接字*/
     void *req_sock;
     /*与对端（客户端）聊天套接字*/
-    void *talk_sock;
+    void *talkin_sock;
+    void *talkout_sock;
     /*服务器通知其他用户状态套接字*/
     void *sub_sock;
 
