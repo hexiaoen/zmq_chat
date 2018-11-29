@@ -18,6 +18,7 @@ Window {
     property var  net_ip
 
 
+
     function rw(num)
     {
         return num*brw
@@ -115,8 +116,10 @@ Window {
 
     Connections
     {
+        id: conn_id
         target: client
 
+        signal msg_change_color(var ix)
         onNetStatusChange:
         {
             console.log("status ", net_status)
@@ -155,10 +158,18 @@ Window {
             }
         }
 
+        /*msg recv form peer, display it*/
         onGet_talk_msg:
         {
-            console.log(msg_id)
+            for(var index =0;  index < on_line_peer.count; index++)
+            {
+                if(msg_id === on_line_peer.get(index).peer_id)
+                    break;
+            }
+
             console.log(msg)
+            rte.text += msg_id + ":\n"+ msg+"\n"
+            conn_id.msg_change_color(index)
         }
     }
 
@@ -180,6 +191,7 @@ Window {
         {
             var msg_id = on_line_peer.get(online_list.currentIndex).peer_id
             client.snd_msg(msg_id, ite.text)
+            rte.text += ite.text
             ite.text = ""
         }
     }
@@ -236,6 +248,7 @@ Window {
 
         visible: false
 
+        color: "lightsteelblue"
         border.color: "gray"
 
         TextEdit
@@ -257,6 +270,7 @@ Window {
         visible: false
 
 
+        color: "lightsteelblue"
         border.color: "gray"
         TextEdit
         {
@@ -292,32 +306,46 @@ Window {
 
         Rectangle
         {
+            id : rect_id
             width: rw(120)
             height: rh(20)
-            color: ListView.isCurrentItem?"green":"lightsteelblue" //选中颜色设置
             border.color: "lightsteelblue"
             Text
             {
+                id: peer_msg
                 anchors.centerIn: parent
                 text: peer_id+"@"+peer_ip
+                color: "black"
+            }
+
+            color: online_list.currentIndex===index? "green":"lightsteelblue" //选中颜色设置
+
+            Connections
+            {
+                target: conn_id
+                onMsg_change_color:
+                {
+                    if(ix === index && online_list.currentIndex !== index)
+                    {
+                        peer_msg.text = "New message!"
+                        peer_msg.color = "red"
+                    }
+                }
             }
 
             MouseArea {
                 anchors.fill: parent
                 onClicked:
                 {
-                    online_list.currentIndex = index  //实现item切换
+                    online_list.currentIndex = index;
+                    peer_msg.text = peer_id+"@"+peer_ip
+                    peer_msg.color = "black"
                 }
-
-                onDoubleClicked:
-                {
-                    online_list.currentIndex = index  //实现item切换
-                    console.log(on_line_peer.get(index).peer_id)
-                }
-
             }
+
         }
     }
+
 
     ListView
     {
@@ -354,4 +382,5 @@ Window {
         }
 */
     }
+
 }

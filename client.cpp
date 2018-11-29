@@ -22,11 +22,11 @@ client::client(QObject *parent) : QObject(parent)
     zmq_connect(sub_sock, PUB_PEER);
 
     talkout_sock = zmq_socket(context, ZMQ_PUB);
-    if( zmq_bind(talkin_sock, "tcp://*:9441") <0)
+    if( zmq_bind(talkout_sock, "tcp://*:9441") <0)
         qDebug(zmq_strerror(zmq_errno()));
 
     talkin_sock = zmq_socket(context, ZMQ_SUB);
-    zmq_setsockopt(talkin_sock, ZMQ_SUBSCRIBE, "ALL", 2);
+    zmq_setsockopt(talkin_sock, ZMQ_SUBSCRIBE, "ALL", 3);
     if( zmq_bind(talkin_sock, "tcp://*:9440") <0)
         qDebug(zmq_strerror(zmq_errno()));
 
@@ -95,28 +95,16 @@ void client::poll_thread()
        }
 
     }
-
 }
 
 void client::snd_msg(const QString &id, const QString &msg)
 {
-#if 0
-    if(router_info[id])
-    {
-        QString peer_ip =  peer_info[id].toString();
-        QString peer_router = "tcp://"+ peer_ip +":9441";
-        zmq_connect(talk_sock, peer_router.toStdString().c_str());
-        router_info[id] = 1;
-    }
-#endif
-
-
     /*1 peer id*/
     s_sendmore(talkout_sock, id.toStdString().c_str());
     /*2 local id*/
     s_sendmore(talkout_sock, this->id.toStdString().c_str());
     /*2 msg*/
-    s_sendmore(talkout_sock, msg.toStdString().c_str());
+    s_send(talkout_sock, msg.toStdString().c_str());
 }
 
 
@@ -157,11 +145,9 @@ void client::connect_to_srv(const QString &id)
                 }
             }while(has_more(req_sock));
 
-#if 1
             QVariantMap::iterator it = peer_info.begin();
             while(it != peer_info.end())
             {
-                qDebug()<<it.key()<<it.value();
                 if(it.key() != this->id)
                 {
                     QString peer_pub = "tcp://" + it.value().toString()+":9441";
@@ -170,7 +156,6 @@ void client::connect_to_srv(const QString &id)
 
                 it++;
             }
-#endif
             emit peer_info_change(peer_info);
         }
         else
