@@ -19,6 +19,7 @@ client::client(QObject *parent) : QObject(parent)
 
     sub_sock = zmq_socket(context, ZMQ_SUB);
     zmq_setsockopt(sub_sock, ZMQ_SUBSCRIBE, "UP", 2);
+    zmq_setsockopt(sub_sock, ZMQ_SUBSCRIBE, "DOWN", 4);
     zmq_connect(sub_sock, PUB_PEER);
 
     talkout_sock = zmq_socket(context, ZMQ_PUB);
@@ -63,17 +64,29 @@ void client::poll_thread()
        {
            /*first frame is prefix */
            char *pre = s_recvmore(sub_sock);
-           free(pre);
-
-           /*send frame is id*/
+           /*second frame is id*/
            char *update_id = s_recvmore(sub_sock);
            char *update_ip = s_recv(sub_sock);
 
-           /*local sub connect to peer pub*/
-           QString peer_pub = "tcp://" + QString(update_ip)+":9441";
-           zmq_connect(talkin_sock, peer_pub.toStdString().c_str());
+           if(!strncmp(pre,"UP", 2))
+           {
+               /*local sub connect to peer pub*/
+               QString peer_pub = "tcp://" + QString(update_ip)+":9441";
+               zmq_connect(talkin_sock, peer_pub.toStdString().c_str());
+               peer_info.insert(update_id, update_ip);
+           }
+           else if(!strncmp(pre, "DOWN", 4))
+           {
+               /*local sub connect to peer pub*/
+               QString peer_pub = "tcp://" + QString(update_ip)+":9441";
+               zmq_disconnect(talkin_sock, peer_pub.toStdString().c_str());
+               QVariantMap::Iterator it = peer_info.find(update_id);
+               if(it != peer_info.end())
+                    peer_info.erase(it);
+           }
 
-           peer_info.insert(update_id, update_ip);
+
+           free(pre);
            free(update_id);
            free(update_ip);
            emit peer_info_change(peer_info);
@@ -152,6 +165,7 @@ void client::connect_to_srv(const QString &id)
                 {
                     QString peer_pub = "tcp://" + it.value().toString()+":9441";
                     zmq_connect(talkin_sock, peer_pub.toStdString().c_str());
+                    qDebug("connect to %s", peer_pub.data());
                 }
 
                 it++;

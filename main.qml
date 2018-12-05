@@ -152,7 +152,7 @@ Window {
             on_line_peer.clear()
             for(var key in g_peer_info)
             {
-               // console.log(key, "=", peer_info[key])
+                //console.log(key, "=", peer_info[key])
                 if(key !== local_id)
                     on_line_peer.append({"peer_id": key, "peer_ip" :peer_info[key]})
             }

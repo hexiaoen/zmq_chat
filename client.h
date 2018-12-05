@@ -13,7 +13,7 @@
 
 #define LOGIN_PEER  "tcp://192.168.2.40:9443"
 #define PUB_PEER    "tcp://192.168.2.40:9442"
-#define TALK_PEER  "tcp://192.168.2.40:9441"
+#define TALK_PEER   "tcp://192.168.2.40:9441"
 
 class client : public QObject
 {
