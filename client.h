@@ -12,9 +12,9 @@
 
 
 
-#define SRV_IP      "192.168.31.104"
-#define LOGIN_PEER  "tcp://192.168.31.104:9443"
-#define PUB_PEER    "tcp://192.168.31.104:9442"
+#define SRV_IP            "47.106.107.103"
+#define LOGIN_PEER  "tcp://47.106.107.103:9443"
+#define PUB_PEER    "tcp://47.106.107.103:9442"
 
 class client : public QObject
 {
