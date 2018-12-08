@@ -93,7 +93,10 @@ void client::poll_thread()
 
 void client::snd_msg(const QString &id, const QString &msg)
 {
+    QStringList qlist = peer_info[id].toString().split(":");
+    QHostAddress node(qlist.first());
 
+    talk_sock->writeDatagram(msg.toStdString().c_str(), msg.length(), node, qlist.last().toUShort());
 }
 
 
