@@ -6,14 +6,15 @@
 #include <QString>
 #include <QVariantMap>
 #include <QVariant>
+#include <QUdpSocket>
 #include "QTimer"
 #include "zmq.h"
 
 
 
-#define LOGIN_PEER  "tcp://192.168.2.40:9443"
-#define PUB_PEER    "tcp://192.168.2.40:9442"
-#define TALK_PEER   "tcp://192.168.2.40:9441"
+#define SRV_IP      "192.168.31.104"
+#define LOGIN_PEER  "tcp://192.168.31.104:9443"
+#define PUB_PEER    "tcp://192.168.31.104:9442"
 
 class client : public QObject
 {
@@ -87,6 +88,7 @@ signals:
 
 public slots:
     void connect_to_srv(const QString &id);
+    void node_msg();
 
 private:
 
@@ -96,16 +98,13 @@ private:
     /*登录服务器请求套接字*/
     void *req_sock;
     /*与对端（客户端）聊天套接字*/
-    void *talkin_sock;
-    void *talkout_sock;
+    QUdpSocket *talk_sock;
     /*服务器通知其他用户状态套接字*/
     void *sub_sock;
 
     /*记录服务器发过来的ID与IP对*/
     QVariantMap peer_info;
 
-    /*记录是否与此ID是否相连过*/
-    QMap<QString, int> router_info;
 
 };
 

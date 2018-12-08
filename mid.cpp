@@ -19,9 +19,8 @@ mid::mid(QObject *parent) : QObject(parent)
 mid::~mid()
 {
     workThread->terminate();
-    delete workThread;
-
     delete net;
+    delete workThread;
 }
 
 void mid::thread_finished()
