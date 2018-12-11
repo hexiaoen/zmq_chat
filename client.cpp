@@ -39,8 +39,59 @@ client::~client()
 
 void client::node_msg()
 {
-    char buf[1024] = "";
-    talk_sock->readDatagram(buf, sizeof (buf));
+    QHostAddress host;
+    quint16 port;
+    msg_t  msg;
+    msg.clear();
+    talk_sock->readDatagram((char *)&msg, msg.length(), &host, &port);
+
+    if(msg.node_id != this->id)
+        qDebug("msg id error: %s-->%s", msg.self_id, msg.node_id);
+
+    QString peer_id = msg.self_id;
+    QMap<QString, node_info_t>::iterator it = node_info_map.find(peer_id);
+
+    if(msg.msg_type == MSG_HELLO)
+    {
+        if(it != node_info_map.end())
+        {
+            it->expire = QTime::currentTime();
+            it->stat = STAT_CONNECTED;
+        }
+        else
+        {
+            node_info_t ni;
+            ni.expire = QTime::currentTime();
+            ni.ip = host.toString();
+            ni.port = port;
+            ni.expire = QTime::currentTime();
+            ni.stat = STAT_CONNECTED;
+
+            node_info_map.insert(peer_id, ni);
+        }
+        msg.pack(MSG_ACK, peer_id, this->id);
+        talk_sock->writeDatagram((const char*)&msg, msg.length(),host, port);
+    }
+    else if(msg.msg_type == MSG_ACK || msg.msg_type == MSG_HEARTBEAT)
+    {
+        /*we do not handle peer node without register*/
+        if(it == node_info_map.end())
+            return;
+
+        it->expire = QTime::currentTime();
+        it->stat = STAT_CONNECTED;
+    }
+    else if(msg.msg_type == MSG_DATA)
+    {
+        /*we do not handle peer node without register*/
+        if(it == node_info_map.end())
+            return;
+
+        it->expire = QTime::currentTime();
+        it->stat = STAT_CONNECTED;
+
+        get_talk_msg(peer_id, msg.content);
+    }
 }
 
 void client::poll_thread()
@@ -53,7 +104,7 @@ void client::poll_thread()
             {sub_sock, 0, ZMQ_POLLIN, 0},
         };
 
-       if(zmq_poll(items, 1, 1000*30) < 0)
+       if(zmq_poll(items, 1, CHECK_INTERVAL) < 0)
        {
            qDebug("zmq_poll error: %s", zmq_strerror(zmq_errno()));
            break;
@@ -72,6 +123,15 @@ void client::poll_thread()
                /*local sub connect to peer pub*/
                qDebug()<<update_id<<"@"<<update_ip;
                peer_info.insert(update_id, update_ip);
+
+               QStringList qlist = QString(update_id).split(":");
+
+               node_info_t ni;
+               ni.ip = qlist.first();
+               ni.port = qlist.last().toUShort();
+               ni.stat = STAT_HELLO;
+               ni.expire = QTime::currentTime();
+               node_info_map.insert(update_id, ni);
            }
            else if(!strncmp(pre, "DOWN", 4))
            {
@@ -79,6 +139,8 @@ void client::poll_thread()
                QVariantMap::Iterator it = peer_info.find(update_id);
                if(it != peer_info.end())
                     peer_info.erase(it);
+
+               node_info_map.remove(update_id);
            }
 
 
@@ -88,15 +150,55 @@ void client::poll_thread()
            emit peer_info_change(peer_info);
        }
 
+
+       QMap<QString, node_info_t>::iterator it = node_info_map.begin();
+       while(it != node_info_map.end())
+       {
+           msg_t msg;
+           QHostAddress node_ip(it->ip);
+            if(it->stat == STAT_CONNECTED )
+            {
+                if(it->expire.secsTo(QTime::currentTime()) > CHECK_INTERVAL)
+                    it->stat = STAT_HELLO;
+                else
+                {
+                    msg.pack(MSG_HEARTBEAT, it.key(), this->id);
+                    talk_sock->writeDatagram((const char *)&msg, msg.length(), node_ip, it->port);
+                }
+            }
+            else if(it->stat == STAT_HELLO)
+            {
+                /*this node is offline*/
+                if(it->expire.secsTo(QTime::currentTime()) > CHECK_INTERVAL * MAX_TRY_COUNT)
+                {
+                    peer_info.remove(it.key());
+                    peer_info_change(peer_info);
+                    it = node_info_map.erase(it);
+                    continue;
+                }
+
+                msg.pack(MSG_HELLO, it.key(), this->id);
+                talk_sock->writeDatagram((const char *)&msg, msg.length(), node_ip, it->port);
+            }
+            it++;
+       }
     }
 }
 
-void client::snd_msg(const QString &id, const QString &msg)
+void client::snd_msg(const QString &id, const QString &data)
 {
-    QStringList qlist = peer_info[id].toString().split(":");
-    QHostAddress node(qlist.first());
+    QMap<QString, node_info_t>::iterator it;
+    it = node_info_map.find(id);
+    if(it == node_info_map.end())
+        return ;
 
-    talk_sock->writeDatagram(msg.toStdString().c_str(), msg.length(), node, qlist.last().toUShort());
+    if(it->stat != STAT_CONNECTED)
+        qDebug("peer is not connected");
+
+    msg_t msg;
+    msg.pack(MSG_DATA, id, this->id, data);
+    QHostAddress node_ip(it->ip);
+    talk_sock->writeDatagram((const char *)&msg, msg.length(), node_ip, it->port);
 }
 
 
@@ -142,10 +244,21 @@ void client::connect_to_srv(const QString &id)
             {
                 if(it.key() != this->id)
                 {
+                    /*send hello to every peer node*/
                     QStringList qlist = it.value().toString().split(":");
-                    QHostAddress node(qlist.first());
+                    QHostAddress node_ip(qlist.first());
 
-                    talk_sock->writeDatagram(it.key().toStdString().c_str(), it.key().toStdString().length(), node, qlist.last().toUShort());
+                    msg_t hello_msg;
+                    hello_msg.pack(MSG_HELLO, it.key(), this->id);
+                    talk_sock->writeDatagram((const char *)&hello_msg, hello_msg.length(), node_ip, qlist.last().toUShort());
+
+                    /*save every peer node info in node_stat */
+                    node_info_t ni;
+                    ni.ip = qlist.first();
+                    ni.port = qlist.last().toUShort();
+                    ni.stat = STAT_HELLO;
+                    ni.expire = QTime::currentTime();
+                    node_info_map.insert(hello_msg.node_id, ni);
                 }
 
                 it++;

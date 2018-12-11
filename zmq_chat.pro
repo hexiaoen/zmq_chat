@@ -30,14 +30,13 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-INCLUDEPATH += F:\project\zmq_share
+INCLUDEPATH += F:\QtProject\zmq_share
 
 
 HEADERS += zmq.h \
     client.h \
     mid.h\
-    zhelpers.h
 
 
-LIBS +=  F:\project\zmq_share\libzmq.lib
+LIBS +=  F:\QtProject\zmq_share\libzmq.lib
 #LIBS +=  -llibzmq
