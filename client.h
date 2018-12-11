@@ -129,10 +129,12 @@ signals:
     void srv_status(int net_status);
     void peer_info_change(const QVariantMap & peer_info);
     void get_talk_msg(QString id, QString msg);
+    void nat_msg(msg_e type, QString peer_id, QHostAddress host, quint16 port);
 
 public slots:
     void connect_to_srv(const QString &id);
     void node_msg();
+    void send_nat_msg(msg_e type, QString id, QHostAddress host, quint16 port);
 
 private:
 

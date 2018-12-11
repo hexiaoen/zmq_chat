@@ -51,6 +51,7 @@ void client::node_msg()
     QString peer_id = msg.self_id;
     QMap<QString, node_info_t>::iterator it = node_info_map.find(peer_id);
 
+    qDebug("msg id %s type =%d", msg.self_id, msg.msg_type);
     if(msg.msg_type == MSG_HELLO)
     {
         if(it != node_info_map.end())
@@ -154,7 +155,6 @@ void client::poll_thread()
        QMap<QString, node_info_t>::iterator it = node_info_map.begin();
        while(it != node_info_map.end())
        {
-           msg_t msg;
            QHostAddress node_ip(it->ip);
             if(it->stat == STAT_CONNECTED )
             {
@@ -162,8 +162,7 @@ void client::poll_thread()
                     it->stat = STAT_HELLO;
                 else
                 {
-                    msg.pack(MSG_HEARTBEAT, it.key(), this->id);
-                    talk_sock->writeDatagram((const char *)&msg, msg.length(), node_ip, it->port);
+                    emit nat_msg(MSG_HEARTBEAT, it.key(), node_ip, it->port);
                 }
             }
             else if(it->stat == STAT_HELLO)
@@ -177,12 +176,18 @@ void client::poll_thread()
                     continue;
                 }
 
-                msg.pack(MSG_HELLO, it.key(), this->id);
-                talk_sock->writeDatagram((const char *)&msg, msg.length(), node_ip, it->port);
+                emit nat_msg(MSG_HELLO, it.key(), node_ip, it->port);
             }
             it++;
        }
     }
+}
+
+void client::send_nat_msg(msg_e type, QString id, QHostAddress host, quint16 port)
+{
+    msg_t msg;
+    msg.pack(type, id, this->id);
+    talk_sock->writeDatagram((const char *)&msg, msg.length(), host, port);
 }
 
 void client::snd_msg(const QString &id, const QString &data)
