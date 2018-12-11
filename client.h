@@ -6,6 +6,7 @@
 #include <QString>
 #include <QVariantMap>
 #include <QVariant>
+#include <QHostAddress>
 #include <QUdpSocket>
 #include <QTime>
 #include "QTimer"
@@ -96,6 +97,8 @@ public:
         MSG_ACK,
         MSG_DATA,
     }msg_e;
+
+    Q_ENUM(msg_e)
 
     typedef struct _msg_t
     {

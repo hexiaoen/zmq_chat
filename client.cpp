@@ -22,6 +22,8 @@ client::client(QObject *parent) : QObject(parent)
     zmq_setsockopt(sub_sock, ZMQ_SUBSCRIBE, "DOWN", 4);
     zmq_connect(sub_sock, PUB_PEER);
 
+    qRegisterMetaType<msg_e>("msg_e");
+    qRegisterMetaType<QHostAddress>("QHostAddress");
     connect(this, &client::nat_msg, this, &client::send_nat_msg);
     QtConcurrent::run(this, &client::poll_thread);
 
